@@ -1,6 +1,7 @@
 # Environment variables
 .env
 backend/.env
+.playwright-mcp/
 
 # Python
 __pycache__/

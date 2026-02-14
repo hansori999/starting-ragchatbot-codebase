@@ -32,8 +32,7 @@ function setupEventListeners() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
-    
-    
+
     // Theme toggle
     themeToggle.addEventListener('click', toggleTheme);
 
@@ -43,6 +42,9 @@ function setupEventListeners() {
             applyTheme(e.matches ? 'light' : 'dark', false);
         }
     });
+
+    // New chat button
+    document.getElementById('newChatButton').addEventListener('click', createNewSession);
 
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
@@ -161,10 +163,16 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
+        const sourcesHtml = sources.map(source => {
+            if (source.link) {
+                return `<a href="${escapeHtml(source.link)}" target="_blank" rel="noopener" class="source-link">${escapeHtml(source.text)}</a>`;
+            }
+            return `<span class="source-tag">${escapeHtml(source.text)}</span>`;
+        }).join('');
         html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+                <div class="sources-content">${sourcesHtml}</div>
             </details>
         `;
     }
