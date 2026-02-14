@@ -21,6 +21,19 @@ def mock_vector_store():
     return store
 
 
+@pytest.fixture
+def mock_rag_system():
+    """Mock RAGSystem for API endpoint tests."""
+    rag = MagicMock()
+    rag.query.return_value = ("This is a test answer.", ["Intro to AI - Lesson 1"])
+    rag.session_manager.create_session.return_value = "session_42"
+    rag.get_course_analytics.return_value = {
+        "total_courses": 3,
+        "course_titles": ["Intro to AI", "Deep Learning", "NLP Basics"],
+    }
+    return rag
+
+
 def sample_search_results(variant="success"):
     """Factory returning SearchResults in different states.
 
