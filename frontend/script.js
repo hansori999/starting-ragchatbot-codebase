@@ -5,7 +5,7 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, themeToggle;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,7 +15,11 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('sendButton');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
-    
+    themeToggle = document.getElementById('themeToggle');
+
+    // Set initial aria-label based on current theme
+    updateThemeAriaLabel(document.documentElement.getAttribute('data-theme') || 'dark');
+
     setupEventListeners();
     createNewSession();
     loadCourseStats();
@@ -30,6 +34,16 @@ function setupEventListeners() {
     });
     
     
+    // Theme toggle
+    themeToggle.addEventListener('click', toggleTheme);
+
+    // Auto-switch theme if OS preference changes and no saved preference
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('theme')) {
+            applyTheme(e.matches ? 'light' : 'dark', false);
+        }
+    });
+
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -40,6 +54,31 @@ function setupEventListeners() {
     });
 }
 
+// Theme Functions
+function toggleTheme() {
+    var current = document.documentElement.getAttribute('data-theme') || 'dark';
+    var next = current === 'dark' ? 'light' : 'dark';
+    applyTheme(next, true);
+}
+
+function applyTheme(theme, savePreference) {
+    document.documentElement.classList.add('theme-transitioning');
+    document.documentElement.setAttribute('data-theme', theme);
+    updateThemeAriaLabel(theme);
+    if (savePreference) {
+        localStorage.setItem('theme', theme);
+    }
+    setTimeout(function() {
+        document.documentElement.classList.remove('theme-transitioning');
+    }, 300);
+}
+
+function updateThemeAriaLabel(theme) {
+    if (themeToggle) {
+        themeToggle.setAttribute('aria-label',
+            theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    }
+}
 
 // Chat Functions
 async function sendMessage() {
