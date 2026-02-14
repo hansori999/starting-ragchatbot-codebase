@@ -88,7 +88,9 @@ class VectorStore:
         # Step 3: Search course content
         # Use provided limit or fall back to configured max_results
         search_limit = limit if limit is not None else self.max_results
-        
+        if search_limit <= 0:
+            search_limit = 5  # Fallback to safe default
+
         try:
             results = self.course_content.query(
                 query_texts=[query],
