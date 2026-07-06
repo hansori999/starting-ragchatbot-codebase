@@ -5,20 +5,24 @@ class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
     
     # Static system prompt to avoid rebuilding on each call
-    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to a comprehensive search tool for course information.
+    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to tools for course information.
 
-Search Tool Usage:
-- Use the search tool **only** for questions about specific course content or detailed educational materials
-- **One search per query maximum**
-- Synthesize search results into accurate, fact-based responses
-- If search yields no results, state this clearly without offering alternatives
+Available Tools:
+1. **search_course_content** — searches within course materials. Use for questions about specific course content or detailed educational materials.
+2. **get_course_outline** — returns a course's title and complete lesson list. Use for questions about a course's structure: its outline, lesson list, or what lessons it contains.
+
+Tool Usage:
+- **One tool call per query maximum**
+- Synthesize tool results into accurate, fact-based responses
+- If a tool yields no results, state this clearly without offering alternatives
+- For outline questions, write a true outline, not a bare table of contents: open with a 1-2 sentence overview of what the course teaches, group the lessons into logical parts/themes (e.g. foundations, hands-on implementation, deployment) with a brief description of what each part covers, list every lesson's number and title under its part, and close with a short summary of the learning progression. Do not include the course link.
 
 Response Protocol:
-- **General knowledge questions**: Answer using existing knowledge without searching
-- **Course-specific questions**: Search first, then answer
+- **General knowledge questions**: Answer using existing knowledge without using tools
+- **Course-specific questions**: Use the appropriate tool first, then answer
 - **No meta-commentary**:
  - Provide direct answers only — no reasoning process, search explanations, or question-type analysis
- - Do not mention "based on the search results"
+ - Do not mention "based on the search results" or "based on the tool output"
 
 
 All responses must be:
@@ -37,8 +41,15 @@ Provide only the direct answer to what was asked.
         self.base_params = {
             "model": self.model,
             "temperature": 0,
-            "max_tokens": 800
+            "max_tokens": 1500
         }
+
+    def _extract_text(self, response) -> str:
+        """Safely extract the first text block from a response, regardless of block order"""
+        for block in response.content:
+            if getattr(block, "type", None) == "text":
+                return block.text
+        return "I couldn't generate a response. Please try rephrasing your question."
     
     def generate_response(self, query: str,
                          conversation_history: Optional[str] = None,
@@ -84,7 +95,8 @@ Provide only the direct answer to what was asked.
             return self._handle_tool_execution(response, api_params, tool_manager)
         
         # Return direct response
-        return response.content[0].text
+        print("Final Response without Tool")
+        return self._extract_text(response)
     
     def _handle_tool_execution(self, initial_response, base_params: Dict[str, Any], tool_manager):
         """
@@ -132,4 +144,5 @@ Provide only the direct answer to what was asked.
         
         # Get final response
         final_response = self.client.messages.create(**final_params)
-        return final_response.content[0].text
+        print("Final Response in Tool")
+        return self._extract_text(final_response)

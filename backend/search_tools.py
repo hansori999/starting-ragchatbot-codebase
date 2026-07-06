@@ -113,6 +113,67 @@ class CourseSearchTool(Tool):
         
         return "\n\n".join(formatted)
 
+class CourseOutlineTool(Tool):
+    """Tool for retrieving a course's outline: title, link, and full lesson list"""
+
+    def __init__(self, vector_store: VectorStore):
+        self.store = vector_store
+        self.last_sources = []  # Track sources from last outline lookup
+
+    def get_tool_definition(self) -> Dict[str, Any]:
+        """Return Anthropic tool definition for this tool"""
+        return {
+            "name": "get_course_outline",
+            "description": "Get the complete outline of a course: title, course link, and the full list of lessons",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "course_name": {
+                        "type": "string",
+                        "description": "Course title (partial matches work, e.g. 'MCP', 'Introduction')"
+                    }
+                },
+                "required": ["course_name"]
+            }
+        }
+
+    def execute(self, course_name: str) -> str:
+        """
+        Execute the outline lookup.
+
+        Args:
+            course_name: Course title to resolve (partial matches work)
+
+        Returns:
+            Formatted course outline or error message
+        """
+        outline = self.store.get_course_outline(course_name)
+
+        if not outline:
+            return f"No course found matching '{course_name}'."
+
+        # Build the formatted outline
+        lines = [f"Course: {outline['title']}"]
+        if outline.get('instructor'):
+            lines.append(f"Instructor: {outline['instructor']}")
+
+        lessons = outline.get('lessons', [])
+        lines.append(f"Lessons ({len(lessons)}):")
+        for lesson in lessons:
+            lines.append(f"Lesson {lesson.get('lesson_number')}: {lesson.get('lesson_title')}")
+
+        # Track sources for the UI — one entry per lesson, matching content search
+        if lessons:
+            self.last_sources = [
+                f"{outline['title']} - Lesson {lesson.get('lesson_number')}"
+                for lesson in lessons
+            ]
+        else:
+            self.last_sources = [outline['title']]
+
+        return "\n".join(lines)
+
+
 class ToolManager:
     """Manages available tools for the AI"""
     
